@@ -7,6 +7,26 @@ The goal of this project is to automate standing up and tearing down a kubernete
 - Cloud init configueres basics of the nodes like ports, swap, ssh keys, and preps to pass over to Ansible
 - Ansible handles initializing, joining, and configuring the cluster.
 
+## Contributing
+
+### Devbox
+
+[Devbox docs](https://www.jetify.com/docs/devbox/installing_devbox/)
+
+Devbox uses NIX to setup contained developer environments with all 
+the packages you need
+
+Install:
+- `curl -fsSL https://get.jetify.com/devbox | bash`
+- On Linux You may have to enable the nix daemon and add yourself to a nix group
+    - sudo systemctl enable nix-daemon
+    - sudo systemctl start nix-daemon
+    - sudo usermod -aG nix-users $(whoami)
+- after that, probably reboot just in case.
+
+Enter the environment:
+`devbox shell`
+
 ## Notes and Learnings
 
 ### Proxmox Output formats
