@@ -100,7 +100,7 @@ if [[ -z "$token_id" || -z "$secret" ]]; then
 fi
 
 # Save to .tfvars file
-output_file=".tfvars"
+output_file="terraform/proxmox_token.tfvars"
 echo -e "proxmox_api_token_id    = \"${token_id}\"\nproxmox_api_token_secret = \"${secret}\"" > "$output_file"
 
 print_status "API token saved to ${output_file}."
@@ -109,7 +109,7 @@ print_status "API token saved to ${output_file}."
 echo -e "${BOLD}${BLUE}=================================================${RESET}"
 echo -e "${BOLD}${GREEN}API credentials saved to ${output_file}.${RESET}"
 echo -e "${BOLD}${GREEN}Use this file in your Terraform setup.${RESET}"
-echo -e "${BOLD}${YELLOW}NOTE: .tfvars is NOT stored in version control. It's git IGNORED."
+echo -e "${BOLD}${YELLOW}NOTE: terraform.tfvars is NOT stored in version control. It's git IGNORED."
 echo -e "${BOLD}${BLUE}=================================================${RESET}"
 
 # Final message

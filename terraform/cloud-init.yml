@@ -1,0 +1,23 @@
+#cloud-config
+hostname: ${hostname}
+ssh_authorized_keys:
+  - |
+    {{ file("/root/.ssh/id_rsa.pub") }}
+  - |
+    {{ file("/home/tform_user/.ssh/id_rsa.pub") }}
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - software-properties-common
+  - kubelet
+  - kubectl
+  - containerd
+runcmd:
+  - swapoff -a
+  - sed -i '/ swap / s/^/#/' /etc/fstab
+  - modprobe overlay
+  - modprobe br_netfilter
+  - echo "1" > /proc/sys/net/bridge/bridge-nf-call-iptables
+  - echo "1" > /proc/sys/net/bridge/bridge-nf-call-ip6tables
+  - echo "1" > /proc/sys/net/ipv4/ip_forward
