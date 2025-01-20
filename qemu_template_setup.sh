@@ -8,13 +8,17 @@
 
 # download the image: we're going to use 24.04 (the most recent LTS as of this commit)
 IMG_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
-IMG_FILE=$(basename "$IMAGE_URL")
+echo "URL: $IMG_URL"
+IMG_FILE=$(basename "$IMG_URL")
+echo "FILE: $IMG_FILE"
 ISO_DIR="/var/lib/vz/template/iso"
-IMG_PATH=$ISO_DIR/$IMG_FILE
+echo "DIR: $ISO_DIR"
+IMG_PATH="$ISO_DIR/$IMG_FILE"
+echo "FULL PATH: $IMG_PATH"
 
 wget $IMG_URL -O $IMG_PATH
 
-# install libguestfs package for the virt-customise tool 
+install libguestfs package for the virt-customise tool 
 apt update -y && apt install libguestfs-tools -y
 
 # configure the image with qemu-guest-agent using virt customise
