@@ -1,3 +1,4 @@
 *.img
 token_data.txt
 *.swp
+.tfvars

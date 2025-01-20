@@ -1,9 +1,11 @@
 #!/bin/bash
 
 # Colors for status updates
+BLUE="\033[0;34m"
 GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
 RED="\033[0;31m"
+BOLD="\033[1m"
 RESET="\033[0m"
 
 # Function to print status messages
@@ -97,11 +99,18 @@ if [[ -z "$token_id" || -z "$secret" ]]; then
     exit 1
 fi
 
-# Save to file
-output_file="token_data.txt"
-echo -e "TokenID: ${token_id}\nSecret: ${secret}" > "$output_file"
+# Save to .tfvars file
+output_file=".tfvars"
+echo -e "proxmox_api_token_id    = \"${token_id}\"\nproxmox_api_token_secret = \"${secret}\"" > "$output_file"
 
 print_status "API token saved to ${output_file}."
+
+# Notify the user in big bold letters
+echo -e "${BOLD}${BLUE}=================================================${RESET}"
+echo -e "${BOLD}${GREEN}API credentials saved to ${output_file}.${RESET}"
+echo -e "${BOLD}${GREEN}Use this file in your Terraform setup.${RESET}"
+echo -e "${BOLD}${YELLOW}NOTE: .tfvars is NOT stored in version control. It's git IGNORED."
+echo -e "${BOLD}${BLUE}=================================================${RESET}"
 
 # Final message
 echo -e "${GREEN}All steps completed successfully!${RESET}"
