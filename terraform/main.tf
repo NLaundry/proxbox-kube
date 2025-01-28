@@ -92,12 +92,11 @@ resource "proxmox_vm_qemu" "worker_nodes" {
   }
 
   network {
-    model  = "virtio"
-    bridge = "vmbr0"
-    ip     = "dhcp"
+    model   = "virtio" # Use the VirtIO network driver.
+    bridge  = "vmbr0"  # Connect to the Proxmox bridge.
+    ip      = "dhcp"   # Request IP via DHCP.
+    macaddr = format("DE:AD:BE:EF:%02X:%02X", count.index / 256, count.index % 256)
   }
-
-  ipconfig0 = format("ip=%s,gw=192.168.101.1", cidrhost(var.base_worker_ip, count.index))
 
   cloudinit {
     user_config = templatefile("${path.module}/cloud-init.yaml", {
