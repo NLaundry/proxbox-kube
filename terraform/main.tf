@@ -29,7 +29,7 @@ resource "proxmox_vm_qemu" "control_nodes" {
   os_type = "cloud-init"
   cores   = 2
   sockets = 1
-  memory  = 4096
+  memory  = 2048
   scsihw  = "virtio-scsi-pci"
   boot    = "order=scsi0"
 
@@ -47,12 +47,13 @@ resource "proxmox_vm_qemu" "control_nodes" {
   }
 
   network {
-    model  = "virtio"
-    bridge = "vmbr0"
-    ip     = "dhcp"
+    model   = "virtio" # Use the VirtIO network driver.
+    bridge  = "vmbr0"  # Connect to the Proxmox bridge.
+    ip      = "dhcp"   # Request IP via DHCP.
+    macaddr = format("DE:AD:BE:EF:%02X:%02X", count.index / 256, count.index % 256)
   }
 
-  ipconfig0 = format("ip=%s,gw=192.168.100.1", cidrhost(var.base_control_ip, count.index))
+  # ipconfig0 = format("ip=%s,gw=192.168.100.1", cidrhost(var.base_control_ip, count.index))
 
   cloudinit {
     user_config = file("${path.module}/cloud-init.yaml")
@@ -117,14 +118,14 @@ resource "null_resource" "inventory" {
 ${proxmox_vm_qemu.control_nodes[0].ipconfig0}
 
 [secondary_control]
-%{ for idx in range(1, var.control_nodes_count) ~}
+%{for idx in range(1, var.control_nodes_count)~}
 ${cidrhost(var.base_control_ip, idx)}
-%{ endfor ~}
+%{endfor~}
 
 [worker_nodes]
-%{ for idx in range(0, var.worker_nodes_count) ~}
+%{for idx in range(0, var.worker_nodes_count)~}
 ${cidrhost(var.base_worker_ip, idx)}
-%{ endfor ~}
+%{endfor~}
 EOF
 EOT
   }
