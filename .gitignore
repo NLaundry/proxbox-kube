@@ -2,4 +2,6 @@
 token_data.txt
 *.swp
 .tfvars
+variables.tf
 devbox.lock
+*.lock.hcl
