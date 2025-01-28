@@ -99,11 +99,26 @@ if [[ -z "$token_id" || -z "$secret" ]]; then
     exit 1
 fi
 
-# Save to .tfvars file
-output_file="terraform/proxmox_token.tfvars"
-echo -e "proxmox_api_token_id    = \"${token_id}\"\nproxmox_api_token_secret = \"${secret}\"" > "$output_file"
+# Get the primary IP address of the vmbr0 interface
+proxmox_ip=$(ip -4 addr show vmbr0 | awk '/inet / {print $2}' | cut -d'/' -f1)
 
-print_status "API token saved to ${output_file}."
+# Validate that we got an IP
+if [[ -z "$proxmox_ip" ]]; then
+    print_error "Failed to detect Proxmox IP address on vmbr0."
+    exit 1
+fi
+
+# Construct the API URL
+proxmox_api_url="https://${proxmox_ip}:8006/api2/json"
+
+# Save to .tfvars file
+output_file="terraform/variables.tfvars"
+echo -e 'variable "pm_api_token_id" {\n  description = "The Proxmox API token ID"\n  default     = "'"${token_id}"'"\n}\n' > "$output_file"
+echo -e 'variable "pm_api_token_secret" {\n  description = "The Proxmox API token secret"\n  default     = "'"${secret}"'"\n}\n' >> "$output_file"
+echo -e 'variable "pm_api_url" {\n  description = "The Proxmox API URL"\n  default     = "'"${proxmox_api_url}"'"\n}\n' >> "$output_file"
+echo -e 'variable "pm_tls_insecure" {\n  description = "Whether to allow insecure TLS connections"\n  default     = true\n}\n' >> "$output_file"
+
+print_status "API token, API URL, and TLS settings saved to ${output_file}."
 
 # Notify the user in big bold letters
 echo -e "${BOLD}${BLUE}=================================================${RESET}"

@@ -1,9 +1,9 @@
 variable "control_nodes_count" {
-  default = 3
+  default = 1
 }
 
 variable "worker_nodes_count" {
-  default = 5
+  default = 1
 }
 
 variable "base_control_ip" {
@@ -11,7 +11,7 @@ variable "base_control_ip" {
 }
 
 variable "base_worker_ip" {
-  default = "192.168.101.100"
+  default = "192.168.101.101"
 }
 
 variable "inventory_path" {
@@ -71,7 +71,7 @@ resource "proxmox_vm_qemu" "worker_nodes" {
 
   agent   = 1
   os_type = "cloud-init"
-  cores   = 2
+  cores   = 1
   sockets = 1
   memory  = 2048
   scsihw  = "virtio-scsi-pci"
