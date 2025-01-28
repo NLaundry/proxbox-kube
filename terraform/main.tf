@@ -47,20 +47,26 @@ resource "proxmox_vm_qemu" "control_nodes" {
   }
 
   network {
-    model   = "virtio" # Use the VirtIO network driver.
-    bridge  = "vmbr0"  # Connect to the Proxmox bridge.
-    ip      = "dhcp"   # Request IP via DHCP.
+    model  = "virtio" # Use the VirtIO network driver.
+    bridge = "vmbr0"  # Connect to the Proxmox bridge.
+    # ip      = "dhcp"   # Request IP via DHCP.
     macaddr = format("DE:AD:BE:EF:%02X:%02X", count.index / 256, count.index % 256)
   }
 
   # ipconfig0 = format("ip=%s,gw=192.168.100.1", cidrhost(var.base_control_ip, count.index))
 
-  cloudinit {
-    user_config = file("${path.module}/cloud-init.yaml")
-  }
+  # cloudinit {
+  #   user_config = file("${path.module}/cloud-init.yaml")
+  # }
 
   ciuser     = "tform_user"
   cipassword = "securepassword"
+
+  user_data = templatefile("${path.module}/cloud-init.yml", {
+    hostname = "k8s-control-node-${count.index + 1}"
+  })
+
+  # user_data = file("${path.module}/cloud-init.yaml")
 }
 
 resource "proxmox_vm_qemu" "worker_nodes" {
@@ -94,15 +100,13 @@ resource "proxmox_vm_qemu" "worker_nodes" {
   network {
     model   = "virtio" # Use the VirtIO network driver.
     bridge  = "vmbr0"  # Connect to the Proxmox bridge.
-    ip      = "dhcp"   # Request IP via DHCP.
+    # ip      = "dhcp"   # Request IP via DHCP.
     macaddr = format("DE:AD:BE:EF:%02X:%02X", count.index / 256, count.index % 256)
   }
 
-  cloudinit {
-    user_config = templatefile("${path.module}/cloud-init.yaml", {
-      hostname = "k8s-worker-node-${count.index + 1}"
-    })
-  }
+  user_data = templatefile("${path.module}/cloud-init.yml", {
+    hostname = "k8s-control-node-${count.index + 1}"
+  })
   ciuser     = "tform_user"
   cipassword = "securepassword"
 }
