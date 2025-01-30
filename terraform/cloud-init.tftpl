@@ -1,0 +1,32 @@
+#cloud-config
+ssh_pwauth: true
+
+users:
+  - name: ansible
+    gecos: Ansible User
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    groups: users, admin, wheel, sudo
+    homedir: /home/ansible
+    shell: /bin/bash
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+# Change passwords for exampleuser using chpasswd
+chpasswd:
+  expire: false
+  users:
+  - {name: ansible, password: password, type: text}
+
+packages:
+  - python3
+  - python3-pip
+  - curl
+  - vim
+
+runcmd:
+  # - echo "PermitRootLogin no" >> /etc/ssh/sshd_config
+  - systemctl restart ssh
+  - echo "Hello, world!" > /etc/motd
+
+final_message: "Cloud-init has finished setting up this VM for Ansible control!"
