@@ -1,6 +1,17 @@
 {
-  "$schema":  "https://raw.githubusercontent.com/jetify-com/devbox/0.13.7/.schema/devbox.schema.json",
-  "packages": ["terraform@latest"],
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.7/.schema/devbox.schema.json",
+  "packages": [
+    "terraform@latest",
+    "python3@latest",
+    "sshpass@latest",
+    "git@latest",
+    "openssh@latest",
+    "ansible@latest",
+    "glibcLocales@latest"
+  ],
+    "env": {
+    "ANSIBLE_INVENTORY": "$PWD/ansible/inventory/inventory.ini"
+  },
   "shell": {
     "init_hook": [
       "echo 'Welcome to devbox!' > /dev/null"

@@ -155,11 +155,17 @@ resource "proxmox_vm_qemu" "worker_nodes" {
   network {
     model   = "virtio" # Use the VirtIO network driver.
     bridge  = "vmbr0"  # Connect to the Proxmox bridge.
-    macaddr = format("DE:AD:BE:EF:%02X:%02X", (count.index + 1) / 256, (count.index + 1) % 256)
-  }
+      macaddr = format("DE:AD:BE:FF:%02X:%02X", count.index / 256, count.index % 256)
+	}
 } 
+variable "base_control_ip_octet" {
+  default = 101  # Only define the last octet
+}
 
-# Generate inventory file for Ansible
+variable "base_worker_ip_octet" {
+  default = 101  # Only define the last octet
+}
+
 resource "null_resource" "inventory" {
   depends_on = [
     proxmox_vm_qemu.control_nodes,
@@ -171,15 +177,15 @@ resource "null_resource" "inventory" {
       mkdir -p ${var.inventory_path}
 
       echo "[prime_control]" > ${var.inventory_path}/inventory.ini
-      echo "${var.base_control_ip}" >> ${var.inventory_path}/inventory.ini
+      echo "10.0.1.${var.base_control_ip_octet}" >> ${var.inventory_path}/inventory.ini
       echo "" >> ${var.inventory_path}/inventory.ini
 
       echo "[secondary_control]" >> ${var.inventory_path}/inventory.ini
-      echo "$(echo ${join("\n", formatlist("10.0.1.%d", range(var.base_control_ip + 101, var.base_control_ip + var.control_nodes_count + 101)))})" >> ${var.inventory_path}/inventory.ini
+      echo "$(echo ${join("\n", formatlist("10.0.1.%d", range(var.base_control_ip_octet + 1, var.base_control_ip_octet + var.control_nodes_count)))})" >> ${var.inventory_path}/inventory.ini
       echo "" >> ${var.inventory_path}/inventory.ini
 
       echo "[worker_nodes]" >> ${var.inventory_path}/inventory.ini
-      echo "$(echo ${join("\n", formatlist("10.0.2.%d", range(var.base_worker_ip + 101, var.base_worker_ip + var.worker_nodes_count + 101)))})" >> ${var.inventory_path}/inventory.ini
+      echo "$(echo ${join("\n", formatlist("10.0.2.%d", range(var.base_worker_ip_octet , var.base_worker_ip_octet + var.worker_nodes_count)))})" >> ${var.inventory_path}/inventory.ini
     EOT
   }
 }
