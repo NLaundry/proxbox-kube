@@ -6,6 +6,9 @@ SNIPPET_NAME="proxbox-kube-ci.yml"
 SCRIPT_DIR=$(pwd)
 CLOUD_INIT_FILE="${SCRIPT_DIR}/terraform/cloud-init.yml"
 
+# Enable Snippets on local storage
+pvesm set local --content snippets,iso,vztmpl,backup
+
 # Check if cloud-init.yml exists in the expected location
 if [ ! -f "$CLOUD_INIT_FILE" ]; then
   echo "Error: cloud-init.yml not found in $CLOUD_INIT_FILE"

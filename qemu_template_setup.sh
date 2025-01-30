@@ -35,11 +35,16 @@ qm set 9000 --scsi0 local-lvm:0,import-from=$IMG_PATH
 # set boot and display options
 # An ide2 is basically emulating an old CD Drive. Cloud Init needs some way to get 
 # Configuration data
-qm set 9000 --ide2 local-lvm:cloudinit
+# qm set 9000 --ide2 local-lvm:cloudinit
+qm set 9000 --scsi1 local-lvm:cloudinit
 qm set 9000 --serial0 socket --vga serial0
 
 # very important - had to be updated in the image
 qm set 9000 --boot c --bootdisk scsi0
+
+qm set 9000 --citype nocloud # for linux
+
+qm cloudinit update 9000 # necessary for some reason
 
 # turn the VM into a template
 qm template 9000

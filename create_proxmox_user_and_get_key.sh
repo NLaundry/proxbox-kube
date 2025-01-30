@@ -81,8 +81,9 @@ else
     exit 1
 fi
 
+# With privsep=0 the token will have all the rights of this user.
 print_status "Generating API token for ${username}@${realm} with ID ${tokenid}..."
-token_output=$(pveum user token add "${username}@${realm}" "${tokenid}" --noheader=1 --noborder=1 2>&1)
+token_output=$(pveum user token add "${username}@${realm}" "${tokenid}" --noheader=1 --noborder=1 --privsep=0 2>&1)
 if [[ $? -eq 0 ]]; then
     print_status "API token created successfully."
 else
@@ -112,7 +113,7 @@ fi
 proxmox_api_url="https://${proxmox_ip}:8006/api2/json"
 
 # Save to .tfvars file
-output_file="terraform/variables.tfvars"
+output_file="terraform/variables.tf"
 echo -e 'variable "pm_api_token_id" {\n  description = "The Proxmox API token ID"\n  default     = "'"${token_id}"'"\n}\n' > "$output_file"
 echo -e 'variable "pm_api_token_secret" {\n  description = "The Proxmox API token secret"\n  default     = "'"${secret}"'"\n}\n' >> "$output_file"
 echo -e 'variable "pm_api_url" {\n  description = "The Proxmox API URL"\n  default     = "'"${proxmox_api_url}"'"\n}\n' >> "$output_file"

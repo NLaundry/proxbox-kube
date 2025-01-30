@@ -5,7 +5,7 @@ variable "pm_api_token_id" {
 
 variable "pm_api_token_secret" {
   description = "The Proxmox API token secret"
-  default     = "56970499-3a2b-4d24-bd37-96370db0fa74"
+  default     = "97b511eb-9876-4589-94a9-8b8a2856bf2b"
 }
 
 variable "pm_api_url" {

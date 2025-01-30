@@ -5,3 +5,5 @@ token_data.txt
 variables.tf
 devbox.lock
 *.lock.hcl
+*.tfstate
+*.tfstate.backup
