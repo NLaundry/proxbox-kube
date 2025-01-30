@@ -20,7 +20,35 @@ variable "inventory_path" {
   default = "../ansible/inventory"
 }
 
+variable "ssh_key_path" {
+  default = "/root/.ssh/id_rsa.pub"
+}
+
+data "local_file" "ssh_public_key" {
+  filename = var.ssh_key_path
+}
+
+data "template_file" "cloud_init" {
+  template = file("${path.module}/cloud-init.tftpl")
+
+  vars = {
+    ssh_public_key = chomp(data.local_file.ssh_public_key.content)
+  }
+}
+
+resource "null_resource" "upload_cloudinit" {
+  provisioner "local-exec" {
+    command = <<EOT
+    echo '${data.template_file.cloud_init.rendered}' > /var/lib/vz/snippets/cloud-init.yml
+    EOT
+  }
+}
+
 resource "proxmox_vm_qemu" "control_nodes" {
+
+  depends_on = [null_resource.upload_cloudinit] # Ensure Cloud-Init is ready before VM creation
+
+
   count       = var.control_nodes_count
   name        = "k8s-control-node-${count.index + 1}"
   desc        = "Kubernetes Control Node ${count.index + 1}"
@@ -35,11 +63,9 @@ resource "proxmox_vm_qemu" "control_nodes" {
   scsihw  = "virtio-scsi-pci"
   boot    = "order=scsi0"
 
-  # citype = nocloud
-  cicustom = "user=local:snippets/proxbox-kube-ci.yml"
-  # ciuser     = "tform_user"
-  # cipassword = "password"
-  ipconfig0 = "ip=10.0.1.${count.index + 100}/24,gw=10.0.0.1"
+  # citype = nocloud # this can't be set in terraform, BUT it absolutely has to on the VM template or cicustom doesn't work at all!
+  cicustom = "user=local:snippets/cloud-init.yml"
+  ipconfig0 = "ip=10.0.1.${count.index + 101}/16,gw=10.0.0.1"
   nameserver = "1.1.1.1 8.8.8.8"
 
  disks {
@@ -71,7 +97,6 @@ resource "proxmox_vm_qemu" "control_nodes" {
   network {
     model  = "virtio" # Use the VirtIO network driver.
     bridge = "vmbr0"  # Connect to the Proxmox bridge.
-    # ip      = "dhcp"   # Request IP via DHCP.
     macaddr = format("DE:AD:BE:EF:%02X:%02X", count.index / 256, count.index % 256)
   }
 
