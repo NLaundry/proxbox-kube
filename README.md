@@ -337,6 +337,12 @@ Enter the environment:
 
 ## Notes and Learnings
 
+### Proxmox has parallelism issues
+
+https://github.com/Telmate/terraform-provider-proxmox/issues/173
+
+basically, you can't spin up multiple VMs based on the same template all at once
+
 ### Proxmox Output formats
 
 By default, proxmox cli stuff tends to output things in "human readable text tables"
