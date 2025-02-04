@@ -5,12 +5,12 @@ variable "pm_api_token_id" {
 
 variable "pm_api_token_secret" {
   description = "The Proxmox API token secret"
-  default     = "97b511eb-9876-4589-94a9-8b8a2856bf2b"
+  default     = "a69458e2-6046-46ea-abd0-8606c6c915eb"
 }
 
 variable "pm_api_url" {
   description = "The Proxmox API URL"
-  default     = "https://10.0.0.81:8006/api2/json"
+  default     = "https://192.168.1.221:8006/api2/json"
 }
 
 variable "pm_tls_insecure" {
