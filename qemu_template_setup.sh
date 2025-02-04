@@ -16,9 +16,15 @@ echo "DIR: $ISO_DIR"
 IMG_PATH="$ISO_DIR/$IMG_FILE"
 echo "FULL PATH: $IMG_PATH"
 
-wget $IMG_URL -O $IMG_PATH
+# Check if the file already exists before downloading
+if [[ -f "$IMG_PATH" ]]; then
+    echo "Image already exists at $IMG_PATH, skipping download."
+else
+    echo "Downloading image..."
+    wget "$IMG_URL" -O "$IMG_PATH"
+fi
 
-install libguestfs package for the virt-customise tool 
+# install libguestfs package for the virt-customise tool 
 apt update -y && apt install libguestfs-tools -y
 
 # configure the image with qemu-guest-agent using virt customise
