@@ -101,10 +101,214 @@ Terraform generates an **Ansible inventory file** dynamically:
 
 This inventory ensures that Ansible can seamlessly manage the cluster setup post-provisioning.
 
+
 ### Ansible
 
-TBD: but the idea is kubernetes node configuration, cluster init, and joining
+This repository contains an **Ansible-based Kubernetes cluster deployment** using **Proxmox, Terraform, and kubeadm**. It automates the **setup of a high-availability Kubernetes cluster** with the following features:
 
+- **HAProxy & Keepalived** for API server load balancing.
+- **Systemd as the cgroup driver** for containerd.
+- **Modular Ansible roles** for easy maintenance.
+- **Kubernetes best practices** from the official documentation.
+
+---
+
+#### Directory Structure
+
+```
+k8s-cluster/
+│── inventory.ini               # Inventory file (INI format)
+│── roles/
+│   ├── bootstrap/              # Base system prep (firewall, swap, sysctl)
+│   ├── container_runtime/      # Installs and configures containerd
+│   ├── kubernetes_install/     # Installs kubeadm, kubelet, kubectl
+│   ├── kubeadm_init/           # Initializes the primary control node
+│   ├── join_secondary_control/ # Joins secondary control nodes
+│   ├── join_workers/           # Joins worker nodes
+│   ├── haproxy/                # Configures HAProxy for API server load balancing
+│   ├── keepalived/             # Sets up a Virtual IP (VIP) for high availability
+│   ├── cni/                    # Deploys the Kubernetes network plugin
+│── playbooks/
+│   ├── common.yml              # Runs bootstrap, container_runtime, kubernetes_install
+│   ├── prime_control.yml       # Runs kubeadm init + generates join tokens
+│   ├── secondary_control.yml   # Runs join tasks for secondary control nodes
+│   ├── worker_nodes.yml        # Runs join tasks for workers
+│   ├── cni.yml                 # Runs after all nodes are joined
+│── site.yml                    # Master playbook to orchestrate everything
+```
+
+---
+
+#### Inventory Configuration
+
+The **inventory file (`inventory.ini`)** defines the **control and worker nodes**, including a **meta-group for control nodes**:
+
+```ini
+[prime_control]
+192.168.1.101
+
+[secondary_control]
+192.168.1.102
+192.168.1.103
+
+[control_nodes:children]
+prime_control
+secondary_control
+
+[worker_nodes]
+192.168.1.201
+192.168.1.202
+```
+
+This allows Ansible to:
+- **Run kubeadm init on the prime control node.**
+- **Join secondary control nodes correctly.**
+- **Apply firewall and networking configurations to all control nodes.**
+
+---
+
+#### Playbook Execution Order
+
+The `site.yml` file ensures **roles run in the correct sequence**:
+
+```yaml
+- import_playbook: playbooks/common.yml
+- import_playbook: playbooks/prime_control.yml
+- import_playbook: playbooks/secondary_control.yml
+- import_playbook: playbooks/worker_nodes.yml
+- import_playbook: playbooks/cni.yml
+```
+
+Each playbook runs the **corresponding roles** based on node type.
+
+---
+
+#### `bootstrap` Role (Base System Setup)
+
+The **`bootstrap` role** prepares all nodes for Kubernetes installation by:
+- **Installing system dependencies** (curl, ca-certificates, etc.).
+- **Configuring sysctl parameters** for networking & cgroup compatibility.
+- **Disabling swap** (required by Kubernetes).
+- **Configuring firewall rules** (specific to control & worker nodes).
+
+##### Firewall Rules
+
+To ensure proper **Kubernetes communication**, firewall rules are set based on **node type**.
+
+**Control Nodes:**
+```yaml
+- name: Open required firewall ports for control nodes
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 6443        # Kubernetes API server
+    - 2379:2380   # etcd server client API
+    - 10250       # Kubelet API
+    - 10257       # kube-controller-manager
+    - 10259       # kube-scheduler
+  when: "'control_nodes' in group_names"
+```
+
+**Worker Nodes:**
+```yaml
+- name: Open required firewall ports for worker nodes
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 10250       # Kubelet API
+    - 30000:32767 # NodePort Services
+  when: "'worker_nodes' in group_names"
+```
+
+##### Sysctl Configuration
+
+This enables **IP forwarding** and **proper cgroup handling** for Kubernetes:
+
+```yaml
+- name: Configure sysctl parameters for Kubernetes networking and systemd cgroup driver
+  ansible.builtin.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
+    - { name: 'net.ipv4.ip_forward', value: '1' }
+    - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
+    - { name: 'systemd.unified_cgroup_hierarchy', value: '0' }  # Ensure legacy cgroup hierarchy is enabled
+```
+
+---
+
+#### `container_runtime` Role (Containerd Setup)
+
+The **`container_runtime` role** installs and configures **containerd**, setting **systemd as the cgroup driver**.
+
+##### Configure Containerd to Use `systemd`
+
+```yaml
+- name: Modify containerd configuration to use systemd cgroup driver
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup = false'
+    replace: 'SystemdCgroup = true'
+```
+
+---
+
+#### `kubernetes_install` Role (Kubeadm, Kubelet, Kubectl)
+
+The **`kubernetes_install` role**:
+- Adds the **Kubernetes APT repository**.
+- Installs `kubeadm`, `kubelet`, and `kubectl`.
+- Prevents **automatic upgrades** by holding package versions.
+
+##### Prevent Upgrades
+
+```yaml
+- name: Hold Kubernetes packages to prevent unwanted upgrades
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+```
+
+---
+
+#### `kubeadm_init` Role (Prime Control Node Setup)
+**TODO:** (Explain how kubeadm initializes the cluster, generates join commands, and sets up control plane components.)
+
+---
+
+#### `join_secondary_control` Role (Secondary Control Node Join)
+**TODO:** (Explain how secondary control nodes join with the `--control-plane` flag and certificate key.)
+
+---
+
+#### `join_workers` Role (Worker Node Join)
+**TODO:** (Explain how worker nodes join using `kubeadm join`.)
+
+---
+
+#### `haproxy` Role (Load Balancer for API Server)
+**TODO:** (Explain how HAProxy distributes API traffic across control nodes.)
+
+---
+
+#### `keepalived` Role (Virtual IP for HA)
+**TODO:** (Explain how Keepalived ensures failover of the API server endpoint.)
+
+---
+
+#### `cni` Role (Networking Plugin)
+**TODO:** (Explain how a CNI like Calico or Flannel is applied after cluster initialization.)
 
 
 ## Contributing

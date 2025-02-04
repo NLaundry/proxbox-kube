@@ -1,0 +1,9 @@
+- name: Hold Kubernetes packages to prevent unwanted upgrades
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+

@@ -184,6 +184,9 @@ resource "null_resource" "inventory" {
       echo "$(echo ${join("\n", formatlist("10.0.1.%d", range(var.base_control_ip_octet + 1, var.base_control_ip_octet + var.control_nodes_count)))})" >> ${var.inventory_path}/inventory.ini
       echo "" >> ${var.inventory_path}/inventory.ini
 
+      echo "[control_nodes:children]" >> ${var.inventory_path}/inventory.ini
+      echo "prime_control\nsecondary_control" >> ${var.inventory_path}/inventory.ini
+
       echo "[worker_nodes]" >> ${var.inventory_path}/inventory.ini
       echo "$(echo ${join("\n", formatlist("10.0.2.%d", range(var.base_worker_ip_octet , var.base_worker_ip_octet + var.worker_nodes_count)))})" >> ${var.inventory_path}/inventory.ini
     EOT

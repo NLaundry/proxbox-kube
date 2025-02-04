@@ -1,0 +1,22 @@
+- name: Open required firewall ports for control nodes
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 6443
+    - 2379:2380
+    - 10250
+    - 10257
+    - 10259
+  when: "'control_nodes' in group_names"
+
+- name: Open required firewall ports for worker nodes
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 10250
+    - 30000:32767
+  when: "'worker_nodes' in group_names"

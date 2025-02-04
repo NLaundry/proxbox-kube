@@ -1,0 +1,12 @@
+- name: Install system dependencies
+  ansible.builtin.include_tasks: install_packages.yml
+
+- name: Configure sysctl parameters for Kubernetes
+  ansible.builtin.include_tasks: sysctl.yml
+
+- name: Disable swap
+  ansible.builtin.include_tasks: disable_swap.yml
+
+- name: Set firewall rules
+  ansible.builtin.include_tasks: firewall.yml
+

@@ -1,0 +1,9 @@
+- name: Install container runtime
+  ansible.builtin.include_tasks: install_containerd.yml
+
+- name: Configure containerd
+  ansible.builtin.include_tasks: configure_containerd.yml
+
+- name: Restart containerd
+  ansible.builtin.include_tasks: restart_containerd.yml
+

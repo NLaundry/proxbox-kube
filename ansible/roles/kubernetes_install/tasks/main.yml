@@ -1,0 +1,9 @@
+- name: Add Kubernetes repository
+  ansible.builtin.include_tasks: add_repo.yml
+
+- name: Install Kubernetes tools
+  ansible.builtin.include_tasks: install_tools.yml
+
+- name: Hold Kubernetes packages at current version
+  ansible.builtin.include_tasks: hold_packages.yml
+

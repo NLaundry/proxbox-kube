@@ -1,0 +1,9 @@
+- name: Install Kubernetes tools
+  ansible.builtin.apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    update_cache: yes
+
