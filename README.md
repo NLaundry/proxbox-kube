@@ -10,8 +10,12 @@ The goal of this project is to automate standing up and tearing down a kubernete
 ## Resources 
 
 [Example Cloud Init configs](https://cloudinit.readthedocs.io/en/latest/reference/examples.html)
+
 [Cloud Init Users](https://www.linode.com/docs/guides/manage-users-with-cloud-init/)
+
 [Kubernetes Ansible Guide](https://spacelift.io/blog/ansible-kubernetes)
+
+[Proxmox Community sources Configuration](https://pve.proxmox.com/pve-docs/chapter-sysadmin.html) #Necessary
 
 ## Automated Setup Steps
 
