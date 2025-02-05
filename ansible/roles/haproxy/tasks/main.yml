@@ -1,0 +1,25 @@
+- name: Ensure HAProxy configuration directory exists
+  ansible.builtin.file:
+    path: /etc/haproxy
+    state: directory
+    mode: '0755'
+
+- name: Deploy HAProxy configuration
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    mode: '0644'
+
+- name: Ensure /etc/kubernetes/manifests directory exists
+  ansible.builtin.file:
+    path: /etc/kubernetes/manifests
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Deploy HAProxy static pod manifest
+  ansible.builtin.template:
+    src: haproxy.yaml.j2
+    dest: /etc/kubernetes/manifests/haproxy.yaml
+    mode: '0644'
+

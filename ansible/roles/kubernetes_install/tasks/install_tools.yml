@@ -1,4 +1,4 @@
-- name: Install Kubernetes tools
+- name: Install kubeadm, kubelet, kubectl
   ansible.builtin.apt:
     name:
       - kubelet
@@ -6,4 +6,8 @@
       - kubectl
     state: present
     update_cache: yes
+
+- name: Pin Kubernetes tools to prevent auto-updates
+  ansible.builtin.command: apt-mark hold kubelet kubeadm kubectl
+  changed_when: false
 

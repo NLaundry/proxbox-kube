@@ -1,0 +1,5 @@
+- name: Prep and Join Worker Nodes
+  hosts: worker_nodes
+  become: yes
+  roles:
+    - join_workers

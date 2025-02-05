@@ -1,0 +1,31 @@
+- name: Ensure Keepalived configuration directory exists
+  ansible.builtin.file:
+    path: /etc/keepalived
+    state: directory
+    mode: '0755'
+
+- name: Deploy Keepalived configuration
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+    mode: '0644'
+
+- name: Deploy Keepalived health check script
+  ansible.builtin.template:
+    src: check_apiserver.sh.j2
+    dest: /etc/keepalived/check_apiserver.sh
+    mode: '0755'
+
+- name: Ensure /etc/kubernetes/manifests directory exists
+  ansible.builtin.file:
+    path: /etc/kubernetes/manifests
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Deploy Keepalived static pod manifest
+  ansible.builtin.template:
+    src: keepalived.yaml.j2
+    dest: /etc/kubernetes/manifests/keepalived.yaml
+    mode: '0644'
+

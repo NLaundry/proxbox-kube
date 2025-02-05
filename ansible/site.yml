@@ -1,0 +1,5 @@
+# - import_playbook: playbooks/common.yml
+- import_playbook: playbooks/prime_control.yml
+- import_playbook: playbooks/secondary_control.yml
+- import_playbook: playbooks/worker_nodes.yml
+# - import_playbook: playbooks/cni.yml

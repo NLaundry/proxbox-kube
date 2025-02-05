@@ -1,21 +1,19 @@
-- name: Create containerd configuration directory
+- name: Ensure containerd is installed
+  ansible.builtin.apt:
+    name: containerd
+    state: present
+    update_cache: yes
+
+- name: Ensure containerd configuration directory exists
   ansible.builtin.file:
     path: /etc/containerd
     state: directory
+    mode: '0755'
 
-- name: Generate default containerd configuration
-  ansible.builtin.command: containerd config default
-  register: containerd_config
-
-- name: Modify containerd configuration to use systemd cgroup driver
-  ansible.builtin.replace:
-    path: /etc/containerd/config.toml
-    regexp: 'SystemdCgroup = false'
-    replace: 'SystemdCgroup = true'
-
-- name: Restart containerd
-  ansible.builtin.systemd:
-    name: containerd
-    state: restarted
-    enabled: yes
+- name: Deploy containerd configuration from template
+  ansible.builtin.template:
+    src: containerd-config.toml.j2
+    dest: /etc/containerd/config.toml
+    mode: '0644'
+  notify: Restart containerd  # This now correctly refers to the handler
 

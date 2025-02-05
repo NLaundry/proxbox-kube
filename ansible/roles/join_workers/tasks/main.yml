@@ -1,0 +1,10 @@
+- name: Join worker nodes to cluster
+  ansible.builtin.command: "{{ hostvars[groups['prime_control'][0]]['worker_join'] }}"
+  when: inventory_hostname in groups['worker_nodes']
+
+- name: Ensure kubelet is running and enabled
+  ansible.builtin.systemd:
+    name: kubelet
+    state: started
+    enabled: yes
+

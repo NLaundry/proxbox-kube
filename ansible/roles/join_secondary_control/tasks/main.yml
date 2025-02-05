@@ -1,0 +1,10 @@
+- name: Join secondary control planes to cluster
+  ansible.builtin.command: "{{ hostvars[groups['prime_control'][0]]['control_plane_join'] }}"
+  when: inventory_hostname in groups['secondary_control']
+
+- name: Ensure kubelet is running and enabled
+  ansible.builtin.systemd:
+    name: kubelet
+    state: started
+    enabled: yes
+

@@ -1,0 +1,24 @@
+- name: Reset Kubernetes Control Plane
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Reset kubeadm
+      ansible.builtin.command: kubeadm reset -f
+      ignore_errors: yes
+
+    - name: Remove Kubernetes configuration files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/kubernetes
+        - /var/lib/etcd
+        - ~/.kube/config
+
+    - name: Restart kubelet
+      ansible.builtin.systemd:
+        name: kubelet
+        state: restarted
+        enabled: yes
+

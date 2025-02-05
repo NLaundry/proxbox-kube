@@ -1,0 +1,39 @@
+global
+   log /dev/log  local0 info
+   chroot      /var/lib/haproxy
+   pidfile     /var/run/haproxy.pid
+   maxconn     4000
+   user        haproxy
+   group       haproxy
+   daemon
+   stats socket /var/lib/haproxy/stats
+
+defaults
+   mode                    tcp
+   log                     global
+   option                  tcplog
+   option                  dontlognull
+   retries                 1
+   timeout http-request    10s
+   timeout queue           20s
+   timeout connect         5s
+   timeout client          20s
+   timeout server          20s
+   timeout check           10s
+
+frontend kube-apiserver
+   bind {{ vip_address }}:6443
+   mode tcp
+   option tcplog
+   default_backend kube-apiserver
+
+backend kube-apiserver
+   option httpchk GET /healthz
+   http-check expect status 200
+   mode tcp
+   option ssl-hello-chk
+   balance roundrobin
+{% for host in groups['control_nodes'] %}
+   server {{ host }} {{ host }}:6443 check
+{% endfor %}
+

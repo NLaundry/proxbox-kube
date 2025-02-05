@@ -1,0 +1,49 @@
+- name: Extract control plane join command
+  ansible.builtin.shell: |
+    awk '/kubeadm join/ {print; getline; print; getline; print}' /tmp/kubeadm_init_output.log | head -n 3 | sed 's/\\//g'
+  args:
+    executable: /bin/bash
+  become: yes
+  register: control_plane_join
+  changed_when: true
+
+- name: Save control plane join command to file
+  ansible.builtin.copy:
+    content: "{{ control_plane_join.stdout }}"
+    dest: /tmp/control-plane-join.sh
+    mode: '0644'
+  become: yes
+
+- name: Extract worker join command
+  ansible.builtin.shell: |
+    awk '/Then you can join any number of worker nodes by running the following on each as root:/ {getline; print; getline; print}' /tmp/kubeadm_init_output.log | sed 's/\\//g'
+  args:
+    executable: /bin/bash
+  become: yes
+  register: worker_join
+  changed_when: true
+
+- name: Save worker join command to file
+  ansible.builtin.copy:
+    content: "{{ worker_join.stdout }}"
+    dest: /tmp/worker-join.sh
+    mode: '0644'
+  become: yes
+
+- name: Read extracted control-plane join command
+  ansible.builtin.slurp:
+    src: /tmp/control-plane-join.sh
+  register: control_plane_join
+  become: yes
+
+- name: Read extracted worker join command
+  ansible.builtin.slurp:
+    src: /tmp/worker-join.sh
+  register: worker_join
+  become: yes
+
+- name: Store join commands as Ansible facts
+  ansible.builtin.set_fact:
+    control_plane_join: "{{ control_plane_join['content'] | b64decode | trim }}"
+    worker_join: "{{ worker_join['content'] | b64decode | trim }}"
+

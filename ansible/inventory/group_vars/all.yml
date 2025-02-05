@@ -1,0 +1,5 @@
+vip_address: 192.168.100.100
+kubernetes_version: "1.32.1"
+control_plane_dns: "k8s-control.local"
+pod_subnet: "10.244.0.0/16"
+apiserver_dest_port: 6443

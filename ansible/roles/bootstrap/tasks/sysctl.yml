@@ -1,12 +1,35 @@
-- name: Configure sysctl parameters for Kubernetes networking and systemd cgroup driver
+- name: Load required kernel modules
+  ansible.builtin.command: modprobe br_netfilter
+  changed_when: false
+
+- name: Ensure br_netfilter module is loaded on boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      br_netfilter
+    mode: '0644'
+
+- name: Configure sysctl parameters for Kubernetes networking
   ansible.builtin.sysctl:
     name: "{{ item.name }}"
     value: "{{ item.value }}"
-    state: present
-    reload: yes
+    sysctl_set: yes
+    ignoreerrors: yes
   loop:
     - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
-    - { name: 'net.ipv4.ip_forward', value: '1' }
     - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
-    - { name: 'systemd.unified_cgroup_hierarchy', value: '0' }  # Ensure legacy cgroup hierarchy is enabled
+    - { name: 'net.ipv4.ip_forward', value: '1' }
+
+- name: Persist Kubernetes sysctl parameters
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/k8s.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward = 1
+    mode: '0644'
+
+- name: Apply sysctl parameters without reboot
+  ansible.builtin.command: sysctl --system
+  changed_when: false
 

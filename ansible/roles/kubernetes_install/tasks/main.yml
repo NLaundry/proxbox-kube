@@ -4,6 +4,6 @@
 - name: Install Kubernetes tools
   ansible.builtin.include_tasks: install_tools.yml
 
-- name: Hold Kubernetes packages at current version
-  ansible.builtin.include_tasks: hold_packages.yml
+- name: Enable kubelet service
+  ansible.builtin.include_tasks: enable_kubelet.yml
 

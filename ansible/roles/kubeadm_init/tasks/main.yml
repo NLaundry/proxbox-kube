@@ -1,0 +1,26 @@
+- name: Ensure kubeadm dependencies are installed
+  ansible.builtin.apt:
+    name: kubeadm
+    state: present
+    update_cache: yes
+
+- name: Copy kubeadm config file
+  ansible.builtin.template:
+    src: kubeadm-config.yaml.j2
+    dest: /etc/kubernetes/kubeadm-config.yaml
+    mode: '0644'
+
+- name: Initialize Kubernetes cluster with kubeadm
+  ansible.builtin.command:
+    cmd: kubeadm init --config /etc/kubernetes/kubeadm-config.yaml --upload-certs
+  register: kubeadm_output
+  changed_when: true
+
+- name: Save kubeadm init output to a file
+  ansible.builtin.copy:
+    content: "{{ kubeadm_output.stdout }}"
+    dest: /tmp/kubeadm_init_output.log
+
+- name: Extract join commands
+  ansible.builtin.include_tasks: extract_join_commands.yml
+

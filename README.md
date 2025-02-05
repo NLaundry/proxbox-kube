@@ -337,6 +337,19 @@ Enter the environment:
 
 ## Notes and Learnings
 
+### Ansible cmd can't handle pipes??
+
+I think this is true. Need to look into. I tried 
+
+```
+- name: Download and dearmor Kubernetes repository key
+  ansible.builtin.command:
+    cmd: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  changed_when: false
+```
+
+And got errors about curl not having a --dearmor flag
+
 ### Proxmox has parallelism issues
 
 https://github.com/Telmate/terraform-provider-proxmox/issues/173

@@ -1,0 +1,8 @@
+- name: Prepare all nodes for Kubernetes
+  hosts: all
+  become: yes
+  roles:
+    - bootstrap
+    - container_runtime
+    - kubernetes_install
+

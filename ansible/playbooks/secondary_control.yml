@@ -1,0 +1,5 @@
+- name: Prep and Join Control Nodes
+  hosts: secondary_control
+  become: yes
+  roles:
+    - join_secondary_control

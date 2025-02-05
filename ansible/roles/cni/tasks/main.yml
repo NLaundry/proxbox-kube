@@ -1,0 +1,31 @@
+- name: Ensure required directories exist
+  ansible.builtin.file:
+    path: /etc/cni/net.d
+    state: directory
+    mode: '0755'
+
+- name: Download Calico CNI manifest
+  ansible.builtin.get_url:
+    url: "https://docs.projectcalico.org/manifests/calico.yaml"
+    dest: "/tmp/calico.yaml"
+    mode: '0644'
+
+- name: Apply Calico CNI manifest
+  ansible.builtin.command: >-
+    kubectl apply --validate=false -f /tmp/calico.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: calico_apply
+  changed_when: "'created' in calico_apply.stdout or 'configured' in calico_apply.stdout"
+
+- name: Wait for all Calico pods to be ready
+  ansible.builtin.command: >-
+    kubectl wait --for=condition=ready pod -n kube-system
+    --selector k8s-app=calico-node --timeout=180s
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: calico_status
+  retries: 6
+  delay: 30
+  until: calico_status.rc == 0
+
