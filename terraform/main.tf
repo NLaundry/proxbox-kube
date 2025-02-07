@@ -28,18 +28,40 @@ data "local_file" "ssh_public_key" {
   filename = var.ssh_key_path
 }
 
+locals {
+  all_nodes = merge(
+    { for i in range(var.control_nodes_count) : "control-${i + 1}" => {
+      hostname       = "k8s-control-node-${i + 1}"
+      cloudinit_file = "/var/lib/vz/snippets/cloud-init-control-${i + 1}.yml"
+      }
+    },
+    { for i in range(var.worker_nodes_count) : "worker-${i + 1}" => {
+      hostname       = "k8s-worker-node-${i + 1}"
+      cloudinit_file = "/var/lib/vz/snippets/cloud-init-worker-${i + 1}.yml"
+      }
+    }
+  )
+}
+
+# Generate separate cloud-init files for each node
 data "template_file" "cloud_init" {
+  for_each = local.all_nodes
+
   template = file("${path.module}/cloud-init.tftpl")
 
   vars = {
+    hostname       = each.value.hostname
     ssh_public_key = chomp(data.local_file.ssh_public_key.content)
   }
 }
 
+# Upload each cloud-init file
 resource "null_resource" "upload_cloudinit" {
+  for_each = local.all_nodes
+
   provisioner "local-exec" {
     command = <<EOT
-    echo '${data.template_file.cloud_init.rendered}' > /var/lib/vz/snippets/cloud-init.yml
+      echo '${data.template_file.cloud_init[each.key].rendered}' > ${each.value.cloudinit_file}
     EOT
   }
 }
@@ -64,7 +86,7 @@ resource "proxmox_vm_qemu" "control_nodes" {
   boot    = "order=scsi0"
 
   # citype = nocloud # this can't be set in terraform, BUT it absolutely has to on the VM template or cicustom doesn't work at all!
-  cicustom   = "user=local:snippets/cloud-init.yml"
+  cicustom   = "user=local:snippets/cloud-init-control-${count.index +1}.yml"
   ipconfig0  = "ip=192.168.100.${count.index + 101}/16,gw=192.168.1.1"
   nameserver = "1.1.1.1 8.8.8.8"
 
@@ -116,14 +138,14 @@ resource "proxmox_vm_qemu" "worker_nodes" {
 
   agent   = 1
   os_type = "cloud-init"
-  cores   = 2             # Workers have 1 core
+  cores   = 2 # Workers have 1 core
   sockets = 1
-  memory  = 4096          
+  memory  = 4096
   scsihw  = "virtio-scsi-pci"
   boot    = "order=scsi0"
 
   # Cloud-init configuration
-  cicustom   = "user=local:snippets/cloud-init.yml"
+  cicustom   = "user=local:snippets/cloud-init-worker-${count.index + 1}.yml"
   ipconfig0  = "ip=192.168.101.${count.index + 101}/16,gw=192.168.1.1"
   nameserver = "1.1.1.1 8.8.8.8"
 
@@ -156,15 +178,15 @@ resource "proxmox_vm_qemu" "worker_nodes" {
   network {
     model   = "virtio" # Use the VirtIO network driver.
     bridge  = "vmbr0"  # Connect to the Proxmox bridge.
-      macaddr = format("DE:AD:BE:FF:%02X:%02X", count.index, count.index % 256)
-	}
-} 
+    macaddr = format("DE:AD:BE:FF:%02X:%02X", count.index, count.index % 256)
+  }
+}
 variable "base_control_ip_octet" {
-  default = 101  # Only define the last octet
+  default = 101 # Only define the last octet
 }
 
 variable "base_worker_ip_octet" {
-  default = 101  # Only define the last octet
+  default = 101 # Only define the last octet
 }
 resource "null_resource" "inventory" {
   depends_on = [
@@ -199,7 +221,7 @@ resource "null_resource" "inventory" {
       # Worker nodes
       echo "[worker_nodes]" >> ${var.inventory_path}/inventory.ini
       if [ ${var.worker_nodes_count} -gt 0 ]; then
-        echo "$(echo ${join("\n", formatlist("192.168.101.%d", range(var.base_worker_ip_octet, var.base_worker_ip_octet + var.worker_nodes_count +1)))})" >> ${var.inventory_path}/inventory.ini
+        echo "$(echo ${join("\n", formatlist("192.168.101.%d", range(var.base_worker_ip_octet, var.base_worker_ip_octet + var.worker_nodes_count + 1)))})" >> ${var.inventory_path}/inventory.ini
       fi
     EOT
   }
