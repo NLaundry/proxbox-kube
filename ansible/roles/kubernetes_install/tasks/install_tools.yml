@@ -1,13 +1,14 @@
-- name: Install kubeadm, kubelet, kubectl
+- name: Install kubeadm, kubelet, kubectl, etcd-client
   ansible.builtin.apt:
     name:
       - kubelet
       - kubeadm
       - kubectl
+      - etcd-client
     state: present
     update_cache: yes
 
 - name: Pin Kubernetes tools to prevent auto-updates
-  ansible.builtin.command: apt-mark hold kubelet kubeadm kubectl
+  ansible.builtin.command: apt-mark hold kubelet kubeadm kubectl etcd-client
   changed_when: false
 

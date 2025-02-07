@@ -1,7 +1,7 @@
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
 kubernetesVersion: "{{ kubernetes_version }}"
-controlPlaneEndpoint: "{{ vip_address }}:6443"
+controlPlaneEndpoint: "{{ vip_address }}:8443"
 networking:
     podSubnet: "{{ pod_subnet }}"
 

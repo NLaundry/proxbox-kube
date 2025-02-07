@@ -1,12 +1,8 @@
 global
    log /dev/log  local0 info
-   chroot      /var/lib/haproxy
-   pidfile     /var/run/haproxy.pid
-   maxconn     4000
-   user        haproxy
-   group       haproxy
    daemon
-   stats socket /var/lib/haproxy/stats
+   user root
+   group root
 
 defaults
    mode                    tcp
@@ -22,7 +18,7 @@ defaults
    timeout check           10s
 
 frontend kube-apiserver
-   bind {{ vip_address }}:6443
+   bind *:8443
    mode tcp
    option tcplog
    default_backend kube-apiserver

@@ -18,11 +18,17 @@ spec:
     - mountPath: /usr/local/etc/haproxy/haproxy.cfg
       name: haproxyconf
       readOnly: true
+    - mountPath: /var/run/haproxy  # ✅ Reference the correct volume
+      name: haproxy-run
   hostNetwork: true
   volumes:
   - hostPath:
       path: /etc/haproxy/haproxy.cfg
       type: FileOrCreate
     name: haproxyconf
+  - hostPath:
+      path: /var/run/haproxy  # ✅ Ensure this volume exists
+      type: DirectoryOrCreate
+    name: haproxy-run
 status: {}
 

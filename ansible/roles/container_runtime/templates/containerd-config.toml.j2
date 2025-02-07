@@ -1,7 +1,7 @@
 version = 2
 
 [plugins."io.containerd.grpc.v1.cri"]
-  sandbox_image = "registry.k8s.io/pause:3.9"
+  sandbox_image = "registry.k8s.io/pause:3.10"
   [plugins."io.containerd.grpc.v1.cri".containerd]
     snapshotter = "overlayfs"
     no_pivot = false

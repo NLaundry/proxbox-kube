@@ -86,7 +86,7 @@ resource "proxmox_vm_qemu" "control_nodes" {
   boot    = "order=scsi0"
 
   # citype = nocloud # this can't be set in terraform, BUT it absolutely has to on the VM template or cicustom doesn't work at all!
-  cicustom   = "user=local:snippets/cloud-init-control-${count.index +1}.yml"
+  cicustom   = "user=local:snippets/cloud-init-control-${count.index + 1}.yml"
   ipconfig0  = "ip=192.168.100.${count.index + 101}/16,gw=192.168.1.1"
   nameserver = "1.1.1.1 8.8.8.8"
 
@@ -181,6 +181,7 @@ resource "proxmox_vm_qemu" "worker_nodes" {
     macaddr = format("DE:AD:BE:FF:%02X:%02X", count.index, count.index % 256)
   }
 }
+
 variable "base_control_ip_octet" {
   default = 101 # Only define the last octet
 }
@@ -198,6 +199,8 @@ resource "null_resource" "inventory" {
     command = <<EOT
       mkdir -p ${var.inventory_path}
 
+      # Use Bash explicitly to avoid /bin/sh issues
+      /bin/bash -c '
       # Prime control node (first control node)
       echo "[prime_control]" > ${var.inventory_path}/inventory.ini
       echo "192.168.100.${var.base_control_ip_octet}" >> ${var.inventory_path}/inventory.ini
@@ -206,7 +209,9 @@ resource "null_resource" "inventory" {
       # Secondary control nodes (all other control nodes)
       echo "[secondary_control]" >> ${var.inventory_path}/inventory.ini
       if [ ${var.control_nodes_count} -gt 1 ]; then
-        echo "$(echo ${join("\n", formatlist("192.168.100.%d", range(var.base_control_ip_octet + 1, var.base_control_ip_octet + var.control_nodes_count + 1)))})" >> ${var.inventory_path}/inventory.ini
+        for ((i = ${var.base_control_ip_octet} + 1; i < $((${var.base_control_ip_octet} + ${var.control_nodes_count})); i++)); do
+          echo "192.168.100.$i" >> ${var.inventory_path}/inventory.ini
+        done
       fi
       echo "" >> ${var.inventory_path}/inventory.ini
 
@@ -221,8 +226,15 @@ resource "null_resource" "inventory" {
       # Worker nodes
       echo "[worker_nodes]" >> ${var.inventory_path}/inventory.ini
       if [ ${var.worker_nodes_count} -gt 0 ]; then
-        echo "$(echo ${join("\n", formatlist("192.168.101.%d", range(var.base_worker_ip_octet, var.base_worker_ip_octet + var.worker_nodes_count + 1)))})" >> ${var.inventory_path}/inventory.ini
+        for ((i = ${var.base_worker_ip_octet}; i < $((${var.base_worker_ip_octet} + ${var.worker_nodes_count})); i++)); do
+          echo "192.168.101.$i" >> ${var.inventory_path}/inventory.ini
+        done
       fi
+
+      # Debugging output
+      echo "=== DEBUG: Generated Inventory ==="
+      cat ${var.inventory_path}/inventory.ini
+      '
     EOT
   }
 }

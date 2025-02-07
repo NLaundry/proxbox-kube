@@ -1,5 +1,7 @@
 - name: Prep and Join Control Nodes
   hosts: secondary_control
+  serial: 1
   become: yes
   roles:
     - join_secondary_control
+    #     - cni

@@ -14,14 +14,22 @@
     mode: '0644'
   become: yes
 
-- name: Extract worker join command
+- name: Extract and sanitize worker join command
   ansible.builtin.shell: |
-    awk '/Then you can join any number of worker nodes by running the following on each as root:/ {getline; print; getline; print}' /tmp/kubeadm_init_output.log | sed 's/\\//g'
-  args:
-    executable: /bin/bash
-  become: yes
+    awk '
+    /Then you can join any number of worker nodes by running the following on each/ {
+        found=1
+        next
+    }
+    found { print }
+    ' /tmp/kubeadm_init_output.log | tr -d '\\\n' | sed 's/  */ /g' | sed 's/^ *//;s/ *$//'
   register: worker_join
-  changed_when: true
+  changed_when: false
+
+- name: Clean up worker join command
+  ansible.builtin.set_fact:
+    worker_join_cleaned: "{{ hostvars[groups['prime_control'][0]]['worker_join'] | regex_replace('\\\n', '') | regex_replace(' +', ' ') | trim }}"
+
 
 - name: Save worker join command to file
   ansible.builtin.copy:

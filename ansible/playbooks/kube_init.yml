@@ -2,7 +2,5 @@
   hosts: prime_control
   become: yes
   roles:
-    - keepalived
-    - haproxy
     - kubeadm_init
     - cni 

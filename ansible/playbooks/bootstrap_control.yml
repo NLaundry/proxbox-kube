@@ -1,0 +1,6 @@
+- name: Setup keepalived and haproxy
+  hosts: control_nodes
+  become: yes
+  roles:
+    - keepalived
+    - haproxy

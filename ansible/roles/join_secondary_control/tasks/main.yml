@@ -1,6 +1,23 @@
-- name: Join secondary control planes to cluster
+- name: Join control plane node to cluster
   ansible.builtin.command: "{{ hostvars[groups['prime_control'][0]]['control_plane_join'] }}"
   when: inventory_hostname in groups['secondary_control']
+  become: yes
+  register: join_result
+  changed_when: join_result.rc == 0
+
+- name: Wait for etcd learner mode to be false before proceeding
+  ansible.builtin.shell: |
+    ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+    --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+    --cert=/etc/kubernetes/pki/etcd/server.crt \
+    --key=/etc/kubernetes/pki/etcd/server.key \
+    member list | grep "true"
+  become: yes
+  register: etcd_status
+  until: etcd_status.rc == 1  # Proceed only when no "isLearner=true" is found
+  retries: 30  # Adjust based on etcd promotion time
+  delay: 10 
+  failed_when: etcd_status.rc not in [0, 1]  # Prevent failure due to unexpected errors
 
 - name: Ensure kubelet is running and enabled
   ansible.builtin.systemd:
