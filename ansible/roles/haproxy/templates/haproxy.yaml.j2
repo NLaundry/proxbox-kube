@@ -12,7 +12,7 @@ spec:
       httpGet:
         host: localhost
         path: /healthz
-        port: {{ apiserver_dest_port }}
+        port: 8443
         scheme: HTTPS
     volumeMounts:
     - mountPath: /usr/local/etc/haproxy/haproxy.cfg
