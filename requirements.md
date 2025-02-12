@@ -43,15 +43,11 @@ The Homegrown Runners System is designed to automate the execution of student co
 
 ---
 
-## **Containerization Strategy**
-### **Preferred Approach: Rootless OCI-Compliant Containers**
-While IT prefers **Apptainer/Singularity**, these tools are optimized for **high-performance computing (HPC)** and lack native **OCI compliance**, making them less suitable for Kubernetes integration.
+## **Containerization Strategy - To Discuss**
 
-Instead, we recommend:
-- **Podman or another rootless OCI-compliant container runtime**:
-  - **Security**: Containers run without root privileges.
-  - **Lightweight**: Ideal for ephemeral container execution.
-  - **Kubernetes Compatibility**: Fully supports OCI-compliant workflows.
+Kubernetes works best with OCI-compliant containers and works best with CRI-O or Containerd as a container runtime environment. These pose security concerns even running in rootless mode. Both Containerd and CRI-O rely on a daemon running on the worker and control nodes.
+
+Because we're largely using Kubernetes for its **jobs** tool, not to run persistent containers, we can at least make use of singularity/apptainer to run batch jobs, but with the high availability approach using static pods, we still need containerd or CRI-O to run those pods.
 
 ---
 
