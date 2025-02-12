@@ -80,7 +80,7 @@ The `telmate/proxmox` provider is used to interact with the Proxmox VE API. It m
 #### 3. **Networking**
 - Each VM uses DHCP for IP assignment but requests specific IPs from predefined ranges:
   - Control nodes: `192.168.100.101+`
-  - Worker nodes: `192.168.101.100+`
+  - Worker nodes: `192.168.101.101+`
 - These ranges ensure predictable IP addressing for easier cluster configuration.
 - A **virtual IP** (192.168.100.100) is reserved for high-availability (HA) purposes.
 
@@ -108,36 +108,54 @@ This inventory ensures that Ansible can seamlessly manage the cluster setup post
 
 ### Ansible
 
-This repository contains an **Ansible-based Kubernetes cluster deployment** using **Proxmox, Terraform, and kubeadm**. It automates the **setup of a high-availability Kubernetes cluster** with the following features:
+Ansible is used to automate the **setup of a high-availability Kubernetes cluster** with the following features:
 
-- **HAProxy & Keepalived** for API server load balancing.
+- **HAProxy & Keepalived** for API server load balancing. Run as static pods.
 - **Systemd as the cgroup driver** for containerd.
-- **Modular Ansible roles** for easy maintenance.
-- **Kubernetes best practices** from the official documentation.
+- **Container runtime environment: containerd** #TODO: migrate to rootless containerd
+- **Calico as the container networking interface (CNI)**
 
 ---
 
 #### Directory Structure
 
 ```
-k8s-cluster/
-│── inventory.ini               # Inventory file (INI format)
+proxbox-kube/
+│── ansible.cfg                 # Ansible configuration file
+│── inventory/
+│   ├── inventory.ini           # Inventory file defining target nodes
+│   ├── inventory_intended.ini  # Reference inventory file
+│   ├── group_vars/             # Variables for different host groups
 │── roles/
-│   ├── bootstrap/              # Base system prep (firewall, swap, sysctl)
+│   ├── bootstrap/              # Base system prep (disable swap, firewall, sysctl)
+│   │   ├── tasks/              # Contains individual Ansible task files
 │   ├── container_runtime/      # Installs and configures containerd
+│   │   ├── tasks/              
+│   │   ├── templates/          # Configuration templates for containerd
 │   ├── kubernetes_install/     # Installs kubeadm, kubelet, kubectl
+│   │   ├── tasks/              
 │   ├── kubeadm_init/           # Initializes the primary control node
+│   │   ├── tasks/              
+│   │   ├── templates/          # Kubeadm configuration templates
 │   ├── join_secondary_control/ # Joins secondary control nodes
+│   │   ├── tasks/              
 │   ├── join_workers/           # Joins worker nodes
+│   │   ├── tasks/              
 │   ├── haproxy/                # Configures HAProxy for API server load balancing
+│   │   ├── tasks/              
+│   │   ├── templates/          # HAProxy configuration templates
 │   ├── keepalived/             # Sets up a Virtual IP (VIP) for high availability
+│   │   ├── tasks/              
+│   │   ├── templates/          # Keepalived configuration templates
 │   ├── cni/                    # Deploys the Kubernetes network plugin
+│   │   ├── tasks/              
 │── playbooks/
+│   ├── bootstrap_control.yml   # Prepares control plane nodes
 │   ├── common.yml              # Runs bootstrap, container_runtime, kubernetes_install
-│   ├── prime_control.yml       # Runs kubeadm init + generates join tokens
+│   ├── kube_init.yml           # Runs kubeadm init + generates join tokens
+│   ├── reset_k8s.yml           # Resets Kubernetes cluster
 │   ├── secondary_control.yml   # Runs join tasks for secondary control nodes
-│   ├── worker_nodes.yml        # Runs join tasks for workers
-│   ├── cni.yml                 # Runs after all nodes are joined
+│   ├── worker_nodes.yml        # Runs join tasks for worker nodes
 │── site.yml                    # Master playbook to orchestrate everything
 ```
 
@@ -145,23 +163,24 @@ k8s-cluster/
 
 #### Inventory Configuration
 
-The **inventory file (`inventory.ini`)** defines the **control and worker nodes**, including a **meta-group for control nodes**:
+The **inventory file (`inventory.ini`)** defines the **prime_control (the node that runs kubeadm init), secondary control and worker nodes**, including a **meta-group for prime and secondary control nodes**:
 
 ```ini
 [prime_control]
-192.168.1.101
+192.168.100.101
 
 [secondary_control]
-192.168.1.102
-192.168.1.103
+192.168.100.102
+192.168.100.103
 
 [control_nodes:children]
 prime_control
 secondary_control
 
 [worker_nodes]
-192.168.1.201
-192.168.1.202
+192.168.101.101
+192.168.101.102
+192.168.101.103
 ```
 
 This allows Ansible to:
@@ -171,148 +190,64 @@ This allows Ansible to:
 
 ---
 
-#### Playbook Execution Order
+#### **Playbook Execution Order and Purpose**
 
-The `site.yml` file ensures **roles run in the correct sequence**:
-
-```yaml
-- import_playbook: playbooks/common.yml
-- import_playbook: playbooks/prime_control.yml
-- import_playbook: playbooks/secondary_control.yml
-- import_playbook: playbooks/worker_nodes.yml
-- import_playbook: playbooks/cni.yml
-```
-
-Each playbook runs the **corresponding roles** based on node type.
+The **Proxbox Kube** project follows a structured sequence of Ansible playbooks to automate the setup of a Kubernetes cluster on Proxmox VMs. Below is the execution order and purpose of each playbook:
 
 ---
 
-#### `bootstrap` Role (Base System Setup)
-
-The **`bootstrap` role** prepares all nodes for Kubernetes installation by:
-- **Installing system dependencies** (curl, ca-certificates, etc.).
-- **Configuring sysctl parameters** for networking & cgroup compatibility.
-- **Disabling swap** (required by Kubernetes).
-- **Configuring firewall rules** (specific to control & worker nodes).
-
-##### Firewall Rules
-
-To ensure proper **Kubernetes communication**, firewall rules are set based on **node type**.
-
-**Control Nodes:**
-```yaml
-- name: Open required firewall ports for control nodes
-  ansible.builtin.ufw:
-    rule: allow
-    port: "{{ item }}"
-    proto: tcp
-  loop:
-    - 6443        # Kubernetes API server
-    - 2379:2380   # etcd server client API
-    - 10250       # Kubelet API
-    - 10257       # kube-controller-manager
-    - 10259       # kube-scheduler
-  when: "'control_nodes' in group_names"
-```
-
-**Worker Nodes:**
-```yaml
-- name: Open required firewall ports for worker nodes
-  ansible.builtin.ufw:
-    rule: allow
-    port: "{{ item }}"
-    proto: tcp
-  loop:
-    - 10250       # Kubelet API
-    - 30000:32767 # NodePort Services
-  when: "'worker_nodes' in group_names"
-```
-
-##### Sysctl Configuration
-
-This enables **IP forwarding** and **proper cgroup handling** for Kubernetes:
-
-```yaml
-- name: Configure sysctl parameters for Kubernetes networking and systemd cgroup driver
-  ansible.builtin.sysctl:
-    name: "{{ item.name }}"
-    value: "{{ item.value }}"
-    state: present
-    reload: yes
-  loop:
-    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
-    - { name: 'net.ipv4.ip_forward', value: '1' }
-    - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
-    - { name: 'systemd.unified_cgroup_hierarchy', value: '0' }  # Ensure legacy cgroup hierarchy is enabled
-```
+##### **1. `common.yml` – Prepare All Nodes for Kubernetes**
+   - **Hosts:** `all`
+   - **Purpose:** Runs essential system configurations on all nodes.
+   - **Key Roles:**
+     - `bootstrap` → Disables swap, configures firewall, and applies system optimizations.
+     - `container_runtime` → Installs and configures `containerd` as the container runtime.
+     - `kubernetes_install` → Installs `kubeadm`, `kubelet`, and `kubectl`.
 
 ---
 
-#### `container_runtime` Role (Containerd Setup)
-
-The **`container_runtime` role** installs and configures **containerd**, setting **systemd as the cgroup driver**.
-
-##### Configure Containerd to Use `systemd`
-
-```yaml
-- name: Modify containerd configuration to use systemd cgroup driver
-  ansible.builtin.replace:
-    path: /etc/containerd/config.toml
-    regexp: 'SystemdCgroup = false'
-    replace: 'SystemdCgroup = true'
-```
+##### **2. `bootstrap_control.yml` – Setup Keepalived and HAProxy**
+   - **Hosts:** `control_nodes`
+   - **Purpose:** Configures high availability (HA) components for the control plane.
+   - **Key Roles:**
+     - `keepalived` → Establishes a virtual IP (VIP) for Kubernetes API high availability.
+     - `haproxy` → Configures HAProxy to balance API server requests across control nodes.
 
 ---
 
-#### `kubernetes_install` Role (Kubeadm, Kubelet, Kubectl)
-
-The **`kubernetes_install` role**:
-- Adds the **Kubernetes APT repository**.
-- Installs `kubeadm`, `kubelet`, and `kubectl`.
-- Prevents **automatic upgrades** by holding package versions.
-
-##### Prevent Upgrades
-
-```yaml
-- name: Hold Kubernetes packages to prevent unwanted upgrades
-  ansible.builtin.dpkg_selections:
-    name: "{{ item }}"
-    selection: hold
-  loop:
-    - kubelet
-    - kubeadm
-    - kubectl
-```
+##### **3. `kube_init.yml` – Initialize Kubernetes Cluster**
+   - **Hosts:** `prime_control`
+   - **Purpose:** Sets up the first control plane node and initializes the Kubernetes cluster.
+   - **Key Roles:**
+     - `kubeadm_init` → Runs `kubeadm init` to initialize the Kubernetes cluster.
+     - `cni` → Deploys the Kubernetes Container Network Interface (CNI) plugin.
 
 ---
 
-#### `kubeadm_init` Role (Prime Control Node Setup)
-**TODO:** (Explain how kubeadm initializes the cluster, generates join commands, and sets up control plane components.)
+##### **4. `secondary_control.yml` – Join Secondary Control Nodes**
+   - **Hosts:** `secondary_control`
+   - **Purpose:** Adds additional control nodes to the cluster.
+   - **Key Roles:**
+     - `join_secondary_control` → Uses join tokens to integrate secondary control nodes.
 
 ---
 
-#### `join_secondary_control` Role (Secondary Control Node Join)
-**TODO:** (Explain how secondary control nodes join with the `--control-plane` flag and certificate key.)
+##### **5. `worker_nodes.yml` – Join Worker Nodes**
+   - **Hosts:** `worker_nodes`
+   - **Purpose:** Adds worker nodes to the cluster, allowing them to run workloads.
+   - **Key Roles:**
+     - `join_workers` → Uses join tokens to register worker nodes with the cluster.
 
 ---
 
-#### `join_workers` Role (Worker Node Join)
-**TODO:** (Explain how worker nodes join using `kubeadm join`.)
+##### **Execution Flow Summary**
+1. **Prepare all nodes (`common.yml`)** → Base setup for all nodes.
+2. **Configure HA (`bootstrap_control.yml`)** → Setup HAProxy and Keepalived for control plane HA.
+3. **Initialize cluster (`kube_init.yml`)** → Initialize the first control node and apply CNI.
+4. **Join control nodes (`secondary_control.yml`)** → Add secondary control nodes.
+5. **Join worker nodes (`worker_nodes.yml`)** → Register worker nodes with the cluster.
 
----
-
-#### `haproxy` Role (Load Balancer for API Server)
-**TODO:** (Explain how HAProxy distributes API traffic across control nodes.)
-
----
-
-#### `keepalived` Role (Virtual IP for HA)
-**TODO:** (Explain how Keepalived ensures failover of the API server endpoint.)
-
----
-
-#### `cni` Role (Networking Plugin)
-**TODO:** (Explain how a CNI like Calico or Flannel is applied after cluster initialization.)
+This structured execution ensures a **consistent, repeatable, and automated** Kubernetes deployment process on Proxmox VMs.
 
 
 ## Contributing
