@@ -33,8 +33,8 @@ The Homegrown Runners System is designed to automate the execution of student co
   - **Shell scripts**: Handles additional system setup tasks.
 - **Control Plane and Load Balancing**:
   - Control plane traffic is balanced using **Keepalived and HAProxy**.
-  - The Kubernetes API is exposed via the **virtual IP (port 6443)**.
-  - The web application communicates with the **Kubernetes control plane endpoint** only on **port 6443**.
+  - The Kubernetes API is exposed via the **virtual IP (port 8443)**.
+  - The web application communicates with the **Kubernetes control plane endpoint** only on **port 8443**.
 
 ### **Ansible Configuration & VM Access**
 - **Ansible controls VMs via SSH** from the **Proxmox host**.
